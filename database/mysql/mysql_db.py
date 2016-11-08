@@ -68,6 +68,12 @@ options:
     required: false
     default: true
     version_added: "2.1"
+  routines:
+    description:
+      - Include routines as part of dump
+    required: false
+    default: false
+    version_added: "2.3"
 author: "Ansible Core Team"
 requirements:
    - mysql (command line binary)
@@ -117,7 +123,7 @@ def db_delete(cursor, db):
     cursor.execute(query)
     return True
 
-def db_dump(module, host, user, password, db_name, target, all_databases, port, config_file, socket=None, ssl_cert=None, ssl_key=None, ssl_ca=None, single_transaction=None, quick=None):
+def db_dump(module, host, user, password, db_name, target, all_databases, port, config_file, socket=None, ssl_cert=None, ssl_key=None, ssl_ca=None, single_transaction=None, quick=None, routines=None):
     cmd = module.get_bin_path('mysqldump', True)
     # If defined, mysqldump demands --defaults-extra-file be the first option
     if config_file:
@@ -144,6 +150,8 @@ def db_dump(module, host, user, password, db_name, target, all_databases, port, 
         cmd += " --single-transaction=true"
     if quick:
         cmd += " --quick"
+    if routines:
+        cmd += " --routines"
 
     path = None
     if os.path.splitext(target)[-1] == '.gz':
@@ -248,6 +256,7 @@ def main():
             config_file=dict(default="~/.my.cnf", type='path'),
             single_transaction=dict(default=False, type='bool'),
             quick=dict(default=True, type='bool'),
+            routines=dict(default=False, type='bool'),
         ),
         supports_check_mode=True
     )
@@ -274,6 +283,7 @@ def main():
     login_host = module.params["login_host"]
     single_transaction = module.params["single_transaction"]
     quick = module.params["quick"]
+    routines = module.params["routines"]
 
     if state in ['dump','import']:
         if target is None:
@@ -317,7 +327,8 @@ def main():
             else:
                 rc, stdout, stderr = db_dump(module, login_host, login_user,
                                             login_password, db, target, all_databases,
-                                            login_port, config_file, socket, ssl_cert, ssl_key, ssl_ca, single_transaction, quick)
+                                            login_port, config_file, socket, ssl_cert, 
+                                            ssl_key, ssl_ca, single_transaction, quick, routines)
                 if rc != 0:
                     module.fail_json(msg="%s" % stderr)
                 else:
